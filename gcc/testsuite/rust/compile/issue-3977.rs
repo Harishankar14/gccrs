@@ -1,72 +1,65 @@
-// Test for issue #3977: ICE in fold_convert_loc with diverging expressions in while conditions
-// { dg-excess-errors "expected boolean expression" }
+// Test for issue #3977 - ICE with continue/break/return in while condition
+
+fn diverge() -> ! {
+    loop {}
+}
 
 fn test_continue() {
     loop {
-        while continue {} // { dg-error "expected boolean expression in 'while' condition" }
+        while continue {}
     }
 }
 
-fn test_break() {
+fn test_break() {      
     loop {
-        while break {} // { dg-error "expected boolean expression in 'while' condition" }
+        while break {}
     }
 }
 
 fn test_return() {
-    while return {} // { dg-error "expected boolean expression in 'while' condition" }
-}
-
-fn test_return_with_value() {
-    while return 42 {} // { dg-error "expected boolean expression in 'while' condition" }
-}
-
-fn test_infinite_loop() {
-    while loop {} {} // { dg-error "expected boolean expression in 'while' condition" }
-}
-
-fn test_nested_continue() {
     loop {
-        loop {
-            while continue {} // { dg-error "expected boolean expression in 'while' condition" }
-        }
+        while return {}
     }
 }
 
 fn test_labeled_break() {
     'outer: loop {
-        while break 'outer {} // { dg-error "expected boolean expression in 'while' condition" }
+        loop {
+            while break 'outer {}
+        }
     }
 }
 
 fn test_labeled_continue() {
     'outer: loop {
-        while continue 'outer {} // { dg-error "expected boolean expression in 'while' condition" }
+        loop {
+            while continue 'outer {}
+        }
     }
 }
 
-// Valid cases that should NOT error
-fn test_valid_boolean() {
-    while true {}
-    while false {}
+fn test_complex_if_else() {
+    loop {
+        while if true { continue } else { break } {}
+    }
 }
 
-fn test_valid_expression() {
-    let x = 5;
-    while x > 0 {}
-}
-
-fn test_valid_function_call() -> bool {
-    fn condition() -> bool { true }
-    while condition() {}
-    true
+fn foo() {
+    while diverge() {
+        break
+    }
+    let _x = 5;
 }
 
 fn main() {
-    test_valid_boolean();
-    test_valid_expression();
-    test_valid_function_call();
-    
-    // The error cases would cause compilation to fail
-    // so they're tested separately
+    // Just reference them so they're "used"
+    if false {
+        test_continue();
+        test_break();
+        test_return();
+        test_labeled_break();
+        test_labeled_continue();
+        test_complex_if_else();
+        foo();
+    }
 }

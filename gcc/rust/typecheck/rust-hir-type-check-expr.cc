@@ -1543,25 +1543,12 @@ TypeCheckExpr::visit (HIR::WhileLoopExpr &expr)
   context->push_new_while_loop_context (expr.get_mappings ().get_hirid ());
   TyTy::BaseType *predicate_type
     = TypeCheckExpr::Resolve (expr.get_predicate_expr ());
-  if (predicate_type->get_kind () == TyTy::TypeKind::ERROR)
-    {
-      infered = TyTy::TupleType::get_unit_type ();
-      context->pop_loop_context ();
-      return;
-    }
-  if (predicate_type->get_kind () == TyTy::TypeKind::NEVER)
+  if (predicate_type->get_kind () != TyTy::TypeKind::BOOL
+      && predicate_type->get_kind () != TyTy::TypeKind::NEVER)
     {
       rust_error_at (expr.get_predicate_expr ().get_locus (),
 		     "expected boolean expression in %<while%> condition");
-      infered = TyTy::TupleType::get_unit_type ();
-      context->pop_loop_context ();
-      return;
-    }
-  if (predicate_type->get_kind () != TyTy::TypeKind::BOOL)
-    {
-      rust_error_at (expr.get_predicate_expr ().get_locus (),
-		     "expected boolean expression in %<while%> condition");
-      infered = TyTy::TupleType::get_unit_type ();
+      infered = new TyTy::ErrorType (expr.get_mappings ().get_hirid ());
       context->pop_loop_context ();
       return;
     }
@@ -1571,13 +1558,6 @@ TypeCheckExpr::visit (HIR::WhileLoopExpr &expr)
       rust_error_at (expr.get_loop_block ().get_locus (),
 		     "expected %<()%> got %s",
 		     block_expr->as_string ().c_str ());
-      infered = TyTy::TupleType::get_unit_type ();
-      context->pop_loop_context ();
-      return;
-    }
-  if (block_expr->get_kind () == TyTy::TypeKind::ERROR)
-    {
-      infered = TyTy::TupleType::get_unit_type ();
       context->pop_loop_context ();
       return;
     }
@@ -1628,9 +1608,9 @@ TypeCheckExpr::visit (HIR::ContinueExpr &expr)
     {
       rust_error_at (expr.get_locus (), ErrorCode::E0268,
 		     "%<continue%> outside of a loop");
+      infered = new TyTy::ErrorType (expr.get_mappings ().get_hirid ());
       return;
     }
-
   infered = new TyTy::NeverType (expr.get_mappings ().get_hirid ());
 }
 
